@@ -1,0 +1,515 @@
+---
+title: "Data Quality Assignment"
+author: "Gilbert Habaasa"
+date: "2025-04-04"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# IPUMS Exercise
+
+## IPUMS International Data Extract and Analysis
+
+### Data Quality, European Doctoral School of Demography 2024-2025
+
+### INED – Paris (France)
+
+### Instructor: Mariona Lozano, Centre d’Estudis Demogràfics
+
+### Student: Gilbert Habaasa
+
+
+### **Getting IPUMS Data into R**
+
+```{r}
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+install.packages("ipumsr")
+```
+
+```{r}
+setwd("C:\\Users\\admin\\OneDrive - London School of Hygiene and Tropical Medicine\\‌INED 2024\\Data Quality\\IPUMS")
+# file.exists("C:\\Users\\admin\\OneDrive - London School of Hygiene and Tropical Medicine\\‌INED 2024\\Data Quality\\IPUMS\\ipumsi_00001.dat.gz")
+
+library(ipumsr) 
+library(tidyverse)
+library(readr)
+ddi <- read_ipums_ddi("ipumsi_00001.xml")
+data <- read_ipums_micro(ddi) 
+data
+```
+
+### **Question and Variables**
+
+In this exercise you will gain basic familiarity with the IPUMS International data exploration and extract system to 
+answer the following question: “What are the differences in urbanization, literacy, and occupational participation in 
+Uganda and Mexico?” You will create a data extract that includes the following variables: **URBAN, SEX, EMPSTAT, OCCISCO, 
+LIT, AGE**. 
+
+**Variables and Code**
+
+URBAN: household location
+  1 = Rural
+  2 = Urban
+  9 = Unknown
+
+SEX 
+  1 = Male
+  2 = Female
+  9 = Missing/blank
+
+URBAN: EMPSTAT: Employment status 
+  1 = Employed
+  2 = Unemployed
+  3 = Not in labor force
+  9 = Unknown/Illegible
+
+OCCISCO: Employment category 
+  01 = Legislators, senior officials and managers
+  02 = Professionals
+  03 = Technicians and associate professionals
+  04 = Clerks
+  05 = Service workers and shop and market sales
+  06 = Skilled agricultural and fishery workers
+  07 = Crafts and related trades workers
+  08 = Plant and machine operators and assemblers
+  09 = Elementary occupations
+  10 = Armed forces
+  11 = Other occupations, unspecified or n.e.c.
+  97 = Response suppressed
+  98 = Unknown
+  99 = NIU (not in universe)
+
+LIT: Literacy 
+  0 = NIU (not in universe)
+  1 = No, illiterate
+  2 = Yes, literate	
+  9 = Unknown, illegible or blank
+
+ AGE 
+  000 = Less than 1 year old
+  001 = 1
+  ... = ...
+  140 = 140
+  999 = Missing
+
+ COUNTRY 
+  484 = Mexico
+  800 = Uganda
+
+
+
+### **Analyse the Data**
+
+### **Part 1: Variable documentation**
+For each variable below, search through the tabbed sections of the variable description to answer each question.
+
+1.Under the “Household” dropdown menu, find the “Geography” subcategory and click on the variable URBAN. What constitutes an urban area in each country?
+a.Mexico 2000:
+
+**Urban places are defined consistently across Mexican samples as localities with 2,500 or more persons.**
+
+b.Uganda 2002:
+
+**Urban areas in 2002 and 2014 are gazetted cities, municipalities and towns with more than 2,000 inhabitants.**
+
+2.What are the codes for URBAN?
+
+**1.Rural; 2.Urban; 9.Unknown.**
+
+3.Find the variable EMPSTAT. Is the reference period of work the same for Mexico and Uganda?
+
+**Mexico-Last week**
+
+**Uganda-Last seven days**
+
+4.What is the universe for EMPSTAT in: 
+
+a.Mexico 2000?
+
+**Mexico-Persons age 12+**
+
+b.Uganda 2002?
+
+**Uganda-Persons age 5+**
+
+
+### **Part 2. Frequencies**
+
+5.Find codes page for the SAMPLE variable. What are the codes for: 
+
+a.Mexico 2000? 
+
+**Value Code for Mexico-484**
+
+b.Uganda 2002?
+
+**Value Code for Uganda-800**
+
+```{r}
+unique(data$COUNTRY)
+```
+
+6.How many individuals are in the Mexico 2000 sample extract?
+
+**There are 10099182 individuals in the Mexico 2000 sample extract**
+
+```{r}
+data |> filter(COUNTRY==484) |> count()
+```
+
+
+7.How many individuals are in the Uganda 2002 sample extract?
+
+**There are 2497449	individuals in the Uganda 2002 sample extract**
+
+```{r}
+data |> filter(COUNTRY==800) |> count()
+```
+
+
+8.What proportion of individuals in the sample lived in urban areas in each country?
+
+a.Mexico 2000:
+
+**In Mexico, 59.2% of individuals in the 2000 sample lived in urban areas.**
+
+b.Uganda 2002:
+
+**In Uganda, 12.3% of individuals in the 2002 sample lived in urban areas.**
+
+```{r}
+100*prop.table(table(data$URBAN,data$COUNTRY),2)
+```
+
+
+
+### **Part 3. Weighted frequencies**
+
+To get a more accurate estimate of the actual proportion of individuals living in urban areas, you will have to use the person weight. 
+
+9.Using weights, what is the total population of each country?
+
+a.Mexico 2000:
+
+**97014867 people**
+
+b.Uganda 2002:
+
+**24974490 people**
+
+```{r}
+data |> filter(COUNTRY==484) |> summarise(total_population=sum(PERWT))
+```
+```{r}
+data |> filter(COUNTRY==800) |> summarise(total_population=sum(PERWT))
+```
+
+
+10.Using weights, how many individuals lived in urban areas in each country?
+
+a.Mexico 2000:
+
+**72409464 people**
+
+b.Uganda 2002:
+
+**3060540 people**
+
+```{r}
+data |> group_by (COUNTRY, URBAN) %>% summarise(living_in_urban=sum(PERWT))
+```
+
+11.Using weights, what proportion of individuals lived in urban areas in each country?
+
+a.Mexico: 2000:
+
+**Using weights, 74.6% of individuals in the Mexico 2000 sample lived in urban areas.**
+
+b.Uganda 2002:
+
+**Using weights, 12.3% of individuals in the Uganda 2002 sample lived in urban areas.**
+
+```{r}
+data |> 
+  group_by(COUNTRY) |> 
+  summarise(prop_urban = sum(PERWT[URBAN == 2]) / sum(PERWT) * 100)
+```
+
+
+### **Part 4. Trends**
+
+12.Using weights, which occupational category has the highest percentage of workers?
+
+a.In Mexico 2000:
+
+***Crafts and related trades workers (17.9%)***
+
+
+b.In Uganda 2002:
+
+***Skilled agricultural and fishery workers (71.4%)***
+
+
+```{r}
+data |> filter(OCCISCO != 98 & OCCISCO != 99 ) |> 
+  group_by(COUNTRY, OCCISCO) |> 
+  summarise(weighted_n = sum(PERWT, na.rm = TRUE), .groups = "drop") |> 
+  group_by(COUNTRY) |> 
+  mutate(perc = weighted_n / sum(weighted_n) * 100)|> 
+  arrange(desc(perc))  |> print(n=50)
+```
+
+
+13.Which occupation category has the highest percentage of female workers?
+
+a.In Mexico 2000:
+
+
+***Code # 05=Service workers and shop and market sales (7.7%)***
+
+
+b.In Uganda 2002:
+
+***Code # 06 = Skilled agricultural and fishery workers (35.3%)***
+
+```{r}
+data |> filter(OCCISCO != 98 & OCCISCO != 99) |> 
+  group_by(COUNTRY, OCCISCO, SEX) |> 
+  summarise(weighted_n = sum(PERWT, na.rm = TRUE), .groups = "drop") |> 
+  group_by(COUNTRY) |> 
+  mutate(perc = weighted_n / sum(weighted_n) * 100)|> 
+  arrange(desc(perc))  |> print(n=50)
+```
+
+
+
+14.What is the labour force participation distribution by gender in each country?
+
+a.Mexico 2000:
+
+***Men-71.7% ; Female-31.4%***
+
+b.Uganda 2002: 
+
+***Men-43.5% ; Female-33.7%***
+
+
+```{r}
+unique(data$EMPSTAT)
+data |> 
+  filter(EMPSTAT %in% c(1, 2, 3)) |>  # esclude 0, 9
+  mutate(
+    labour_force = ifelse(EMPSTAT %in% c(1, 2), 1, 0)
+  ) |> 
+  group_by(COUNTRY, SEX) |> 
+  summarise(
+    total = sum(PERWT, na.rm = TRUE),
+    lf = sum(PERWT * labour_force, na.rm = TRUE),
+    lfpr = lf / total * 100,
+    .groups = "drop"
+  )
+```
+
+15.What percentage of women within the labour force is working:
+
+a.In agriculture in Mexico 2000:
+
+ ***4.7% of women within labourforce in Mexico work in agriculture***
+
+b.In agriculture in Uganda 2002:
+
+ ***76.5% of women within labourforce in Uganda work in agriculture***
+
+c.In service in Mexico 2000: 
+
+ ***23.7% of women within labourforce in Uganda work in services employment***
+
+d.In service in Uganda 2002:
+
+ ***8.7% of women within labourforce in Uganda work in services employment***
+ 
+
+```{r}
+unique(data$OCCISCO)
+```
+
+
+```{r}
+
+# AGRICULTURE IN MEXICO AND UGANDA
+
+# MEXICO
+# Women labour force in Mexico 
+subset_data <- data[data$COUNTRY == 484 & 
+                      data$SEX == 2 & 
+                      data$EMPSTAT %in% c(1, 2), ]
+
+# Occupational categories
+agriculture_codes <- c("6")  # Agricultural workers
+
+# Numerator 1: Women in agriculture occupation (OCCISCO == 6)
+numerator1 <- sum(subset_data$PERWT[subset_data$EMPSTAT == 1 & subset_data$OCCISCO == 6], na.rm = TRUE)
+
+# Denominator: Total women in labour force (working+Non-working)
+denominator1 <- sum(subset_data$PERWT, na.rm = TRUE)
+
+
+# Mexico Percent of Women in labourforce working in agriculture
+mexico_perc_agric <- (numerator1 / denominator1) * 100
+mexico_perc_agric
+
+#UGANDA
+# Women labour force in Uganda 
+subset_data <- data[data$COUNTRY == 800 & 
+                      data$SEX == 2 & 
+                      data$EMPSTAT %in% c(1, 2), ]
+
+# Numerator 2: Women in agriculture occupation (OCCISCO == 6)
+numerator2 <- sum(subset_data$PERWT[subset_data$EMPSTAT == 1 & subset_data$OCCISCO == 6], na.rm = TRUE)
+
+# Denominator 2: Total women in labour force (working+Non-working)
+denominator2 <- sum(subset_data$PERWT, na.rm = TRUE)
+
+
+# Uganda Percent of Women in labourforce working in agriculture
+uganda_perc_agric <- (numerator2 / denominator2) * 100
+uganda_perc_agric
+
+```
+
+```{r}
+
+# SERVICES IN MEXICO AND UGANDA
+
+# MEXICO
+# Women labour force in Mexico 
+subset_data <- data[data$COUNTRY == 484 & 
+                      data$SEX == 2 & 
+                      data$EMPSTAT %in% c(1, 2), ]
+
+# Occupational categories
+service_codes <- c("5")  # Service workers
+
+# Numerator 3: Women in service occupation (OCCISCO == 5)
+numerator3 <- sum(subset_data$PERWT[subset_data$EMPSTAT == 1 & subset_data$OCCISCO == 5], na.rm = TRUE)
+
+# Denominator 3: Total women in labour force (working+Non-working)
+denominator3 <- sum(subset_data$PERWT, na.rm = TRUE)
+
+
+# Mexico Percent of Women in labourforce working in service Occupation 
+mexico_perc_services <- (numerator3 / denominator3) * 100
+mexico_perc_services
+
+#UGANDA
+# Women labour force in Uganda 
+subset_data <- data[data$COUNTRY == 800 & 
+                      data$SEX == 2 & 
+                      data$EMPSTAT %in% c(1, 2), ]
+
+# Numerator 4: Women in Service occupation (OCCISCO == 6)
+numerator4 <- sum(subset_data$PERWT[subset_data$EMPSTAT == 1 & subset_data$OCCISCO == 5], na.rm = TRUE)
+
+# Denominator 4: Total women in labour force (working+Non-working)
+denominator4 <- sum(subset_data$PERWT, na.rm = TRUE)
+
+
+# Uganda Percent of Women in labourforce working in Service Occupation
+uganda_perc_services <- (numerator4 / denominator4) * 100
+uganda_perc_services
+
+```
+
+### **Part 5: Graphical Analysis**
+
+16.What percentage of the population is literate in each country?
+
+a.Mexico 2000:
+
+***77.7% of the Population in Mexico 2000 is literate***
+
+b.Uganda 2002:
+
+***45.1% of the Population in Uganda 2002 is literate***
+
+
+```{r}
+#Mexico 2000: Percentage literate, excluding response suppressed, unknown, and NIU
+mexico_literacy <- data %>%
+  filter(COUNTRY == 484, YEAR == 2000, LIT == 2, !LIT %in% c(97, 98, 99)) %>%
+  summarise(literate_weight = sum(PERWT, na.rm = TRUE)) %>%
+  mutate(
+    mexico_literacy_percentage = literate_weight / 
+      sum(data$PERWT[data$COUNTRY == 484 & data$YEAR == 2000], na.rm = TRUE) * 100
+  )
+mexico_literacy$mexico_literacy_percentage
+
+#Uganda 2002: Percentage literate, excluding response suppressed, unknown, and NIU
+uganda_literacy <- data %>%
+  filter(COUNTRY == 800, YEAR == 2002, LIT == 2, !LIT %in% c(97, 98, 99)) %>%
+  summarise(literate_weight = sum(PERWT, na.rm = TRUE)) %>%
+  mutate(
+    uganda_literacy_percentage = literate_weight / 
+      sum(data$PERWT[data$COUNTRY == 800 & data$YEAR == 2002], na.rm = TRUE) * 100
+  )
+
+uganda_literacy$uganda_literacy_percentage
+```
+
+17.(OPTIONAL) Create a graph to visualize differences in the percentage of literacy by AGE and SEX in both countries. 
+
+```{r}
+data |> 
+  filter(LIT %in% 1:2, AGE < 100) |> 
+  summarise(n = sum(PERWT), .by = c(COUNTRY, LIT, AGE)) |> 
+  mutate(prop = round(100*n/sum(n),2), .by = c(COUNTRY,AGE)) |>
+  mutate(
+    COUNTRY = factor(COUNTRY, levels = c(484, 800), labels = c("Mexico","Uganda"))
+  ) |> 
+  filter(LIT == 2, AGE >= 10) |> 
+  ggplot() +
+  aes(x = AGE, y = prop, color = COUNTRY, group = COUNTRY) +
+  geom_point(size = 2, alpha = .5, show.legend = FALSE) +
+  geom_smooth(se = FALSE,linewidth = 1.3, show.legend = FALSE) +
+  scale_color_manual(values = c("blue","red")) +
+  scale_y_continuous(breaks = seq(0,100,20)) +
+  scale_x_continuous(breaks = seq(0,100,10)) +
+  labs(
+    x = "Age (years)",
+    y = "Proportion of literate population (%)",
+    caption = "Source: IPUMS International Census data",
+    title = "Proportion of literate population by age (%) in Mexico and Uganda"
+  ) +
+  annotate(
+    geom="text",
+    x=80,
+    y=80,
+    label="Mexico 2000",
+    color="black",
+    fontface =2,
+    size = 6
+  ) +
+  annotate(
+    geom="text",
+    x=50,
+    y=30,
+    label="Uganda 2002",
+    color="black",
+    fontface =2,
+    size = 6
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    plot.title = element_text(color = "black", face = "bold", hjust = .5),
+    plot.caption = element_text(color = "black", face = "italic", hjust = 1),
+    axis.title.x = element_text(color = "black", face = "bold", hjust = .5),
+    axis.title.y = element_text(color = "black", face = "bold", hjust = .5),
+    axis.text = element_text(color = "black")
+  )
+```
+
+
+
+
+
